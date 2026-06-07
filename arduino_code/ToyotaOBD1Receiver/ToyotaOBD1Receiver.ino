@@ -1,5 +1,5 @@
 // Stripped Toyota OBD1 receiver for an Arduino Uno-compatible ATmega328P.
-// Signal input: D7. Status output: CH340/USB Serial at 115200 baud.
+// Signal input: D2. Status output: CH340/USB Serial at 115200 baud.
 //
 // The packet decoder is intentionally based on hyperion11/toyota-obd-1 OBD.ino:
 // long HIGH preamble, 8 ms bit cells, 4-bit ID, then bytes framed as
@@ -8,7 +8,7 @@
 #include <Arduino.h>
 
 #define LED_PIN 13
-#define ENGINE_DATA_PIN 7
+#define ENGINE_DATA_PIN 2
 #define MY_HIGH HIGH
 #define MY_LOW LOW
 #define TOYOTA_MAX_BYTES 24
@@ -30,21 +30,6 @@ volatile uint16_t ToyotaFailBit = 0;
 volatile bool ToyotaFailPending = false;
 
 void ChangeState();
-
-ISR(PCINT2_vect) {
-  ChangeState();
-}
-
-static void setupD7PinChangeInterrupt() {
-#if !defined(__AVR_ATmega328P__) && !defined(__AVR_ATmega168__)
-#error This sketch expects an Arduino Uno-compatible AVR with D7 on PCINT23.
-#endif
-  noInterrupts();
-  PCICR |= _BV(PCIE2);     // Enable pin-change interrupt group for D0..D7.
-  PCMSK2 |= _BV(PCINT23);  // Enable D7 only.
-  PCIFR |= _BV(PCIF2);     // Clear any pending group-2 change flag.
-  interrupts();
-}
 
 float getOBDdata(byte OBDdataIDX) {
   float returnValue;
@@ -154,9 +139,9 @@ void setup() {
   Serial.begin(115200);
   pinMode(LED_PIN, OUTPUT);
   pinMode(ENGINE_DATA_PIN, INPUT);
-  setupD7PinChangeInterrupt();
+  attachInterrupt(digitalPinToInterrupt(ENGINE_DATA_PIN), ChangeState, CHANGE);
 
-  Serial.println(F("READY toyota_obd1_receiver input=D7 serial=115200 bit_cell_ms=8"));
+  Serial.println(F("READY toyota_obd1_receiver input=D2 serial=115200 bit_cell_ms=8"));
 }
 
 void loop() {

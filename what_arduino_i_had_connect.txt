@@ -1,0 +1,84 @@
+the current dip switch is
+1 OFF
+2 OFF
+3 ON
+4 ON
+5 OFF
+6 OFF
+7 OFF
+8 OFF
+
+-----
+
+
+看照片，這是 UNO+WiFi R3 類型的板子：ATmega328P + ESP8266 + CH340G。重點是：ATmega 跟 ESP8266 不是永遠硬接在一起，而是透過那排 8 位 DIP switch 選擇怎麼接。官方資料也寫這板子讓兩顆 MCU 共用 CH340G USB-to-TTL 轉接晶片。
+
+1. 無線 ESP8266 跟 ATmega 有接一起嗎？哪個 pin？
+
+有，但主要是接在 UART 序列埠 上：
+
+ATmega328P / Arduino 這邊：D0/RX、D1/TX
+ESP8266 這邊：RXD、TXD，也就是 UART0
+實際通訊是交叉接法：
+ATmega TX / D1 → ESP RXD
+ATmega RX / D0 ← ESP TXD
+
+當 DIP 1、2 撥 ON 時，就是把 ATmega 的硬體 Serial pins 0/1 接到 ESP8266 的 UART；官方文件也明確說 DIP 1、2 ON 會把 ATmega 硬體 Serial，也就是 pins 0/1，接到 ESP8266 UART。
+
+所以你在 Arduino 程式裡用：
+
+Serial.begin(115200);
+Serial.println("AT");
+
+這個 Serial 就是在跟 ESP8266 講話，前提是 DIP 1、2 ON，而且 ESP8266 裡面有可回應的韌體，例如 AT firmware。
+
+注意：D0/D1 也是 Arduino Uno 上傳程式、USB 序列監控會用的腳，所以 MCU+WiFi 模式時不適合同時拿 USB Serial debug，容易互相搶線。
+
+2. 那排 switch 是幹嘛？
+
+那排是 8 位 DIP switch，用來切換「USB、ATmega、ESP8266」三者的 UART 連線。常用模式如下：
+
+用途	DIP 1	2	3	4	5	6	7	8
+ATmega ↔ ESP8266 通訊	ON	ON	OFF	OFF	OFF	OFF	OFF	不用
+USB/CH340 ↔ ATmega，上傳 Arduino Uno 程式	OFF	OFF	ON	ON	OFF	OFF	OFF	不用
+USB/CH340 ↔ ESP8266，序列監控/AT 指令	OFF	OFF	OFF	OFF	ON	ON	OFF	不用
+USB/CH340 ↔ ESP8266，燒錄 ESP 韌體	OFF	OFF	OFF	OFF	ON	ON	ON	不用
+全部斷開	OFF	OFF	OFF	OFF	OFF	OFF	OFF	不用
+
+這張表跟板子上印的模式相同：CH340→ESP8266 燒錄是 5、6、7 ON；CH340→ESP8266 一般連線是 5、6 ON；CH340→ATmega 是 3、4 ON；ATmega↔ESP8266 是 1、2 ON；第 8 顆保留不用。
+
+第 7 顆比較特別：它是把 ESP8266 的 GPIO0 拉到 GND。ESP8266 在 reset 時如果 GPIO0 是 low/GND，就會進入 serial bootloader 燒錄模式；GPIO0 是 high/VCC 時才正常跑 flash 裡的程式。
+所以燒完 ESP 之後要把 7 關掉，再 reset，不然它會一直停在燒錄模式。
+
+3. 那些表格的意思
+
+板子正面 DIP 旁邊那個表格：
+
+MCU+WiFi：ATmega 跟 ESP8266 互接序列埠，也就是 DIP 1、2。
+USB+MCU：USB 連到 ATmega，用來上傳 Arduino Uno 程式，也就是 DIP 3、4。
+USB+ESP：USB 連到 ESP8266，用來下 AT 指令、看 ESP log、或準備燒錄，也就是 DIP 5、6。
+GND-GPIO0：把 ESP8266 GPIO0 拉低，讓 ESP 進燒錄模式，也就是 DIP 7。
+
+背面那個表格：
+
+MCU-ATmega328P：板上 Arduino Uno 主控。
+WiFi-ESP8266 + flash：板上的 WiFi 晶片與外部 flash。
+USB-TTL CH340G：USB 轉 UART 晶片。
+另一個 ESP Pins 表格是 ESP8266 額外引出的 pinout，例如 RXD、TXD、GPIO0、GPIO2、GPIO4、GPIO12、GPIO16、CH_PD、RESET、3.3V、GND 等。這些不是 Arduino D0~D13；它們是 ESP8266 自己的腳位。官方 pinout 圖也把 Arduino 腳位、ICSP、ESP Pins 分開標出。
+
+旁邊的 RX / TX / ON / L 則是指示燈：RX/TX 是序列通訊活動，ON 是電源，L 是類似 Arduino Uno 上的內建 LED 指示。
+
+4. Power 的警告是在幹嘛？
+
+背面寫的意思大概是：
+
+DC IN 7–12V：從圓孔電源座或 VIN 供電時，建議輸入 7–12V。
+DC OUT 5V / 800mA：板上的 5V rail 可供外部模組用，但不要超過約 800mA。
+DC OUT 3.3V / 800mA：板上的 3.3V rail 也可供外部模組用，但不要超過約 800mA。
+
+比較重要的安全點是：ATmega 那邊是 5V 邏輯，ESP8266 是 3.3V 邏輯。這塊板子在 ATmega↔ESP 的內部 UART 線上有做電平轉換，但如果你自己把外部感測器或 5V 訊號接到 ESP Pins，ESP8266 腳位不要吃超過 3.3V。官方資料也有同樣提醒：ESP8266 只耐 3.3V，外接到 ESP GPIO 時不要超過 3.3V。
+
+最常見用法：
+要寫 Arduino 程式 → 3、4 ON。
+要寫 ESP8266 程式 → 5、6、7 ON，燒完後 7 OFF。
+要讓 Arduino 控 WiFi → 1、2 ON，用 Serial 跟 ESP8266 溝通。

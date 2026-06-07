@@ -1,0 +1,7 @@
+
+arduino:pin D2
+is connected to 
+this computer (the rpi) gpio21
+
+> this is for the obd1 sig.
+> signal dirction is rpi to arduino

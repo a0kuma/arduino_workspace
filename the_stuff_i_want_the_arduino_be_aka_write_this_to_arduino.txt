@@ -1,0 +1,4 @@
+我要參數用hyperion11的.只是他的週邊很複雜.我沒有要那麼複雜的週邊,都走ch340回來.aka週邊都捨去.靠ch340來確認arduino程式跑的狀況
+arduino的程式邏輯不做改動.只做捨棄週邊
+基於
+https://github.com/hyperion11/toyota-obd-1
