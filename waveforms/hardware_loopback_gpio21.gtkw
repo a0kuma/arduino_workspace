@@ -1,8 +1,0 @@
-[*]
-[dumpfile] /home/rpi3b/arduino_workspace/waveforms/hardware_loopback_gpio21.vcd
-[dumpfile_mtime] 0
-[timestart] 0
-[size] 1200 700
-[pos] -1 -1
-@28
-toyota_obd1.gpio21_to_d2
