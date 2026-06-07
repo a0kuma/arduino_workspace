@@ -1,3 +1,16 @@
+the current dip switch is
+1 OFF
+2 OFF
+3 ON
+4 ON
+5 OFF
+6 OFF
+7 OFF
+8 OFF
+
+-----
+
+
 看照片，這是 UNO+WiFi R3 類型的板子：ATmega328P + ESP8266 + CH340G。重點是：ATmega 跟 ESP8266 不是永遠硬接在一起，而是透過那排 8 位 DIP switch 選擇怎麼接。官方資料也寫這板子讓兩顆 MCU 共用 CH340G USB-to-TTL 轉接晶片。
 
 1. 無線 ESP8266 跟 ATmega 有接一起嗎？哪個 pin？
